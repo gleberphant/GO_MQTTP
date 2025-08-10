@@ -1,31 +1,31 @@
-/*/
+/*
+/
 - aplicação do cliente.
 - conectar em servidor
 - subscreve em topicos
 - posta mensagens
 - recebe mensagens
-/*/
-
+/
+*/
 package main
 
 import (
 	"fmt"
 )
 
-const (
-	broker_url = "tcp://localhost:1883"
-	clientID   = "go-mqtt-client"
-	topic      = "iot"
-)
-
 type connection struct {
-	status  bool
-	topicId string
-	msgs    string
+	status     bool
+	broker_url string
+	clientId   string
+	topicId    string
+	msgs       string
 }
 
 // 1 - função para conectar ao servidor mqttp
 func (c *connection) connectMQTTPServer() error {
+	c.broker_url = "tcp://localhost:1883"
+	c.clientId = "client1"
+	c.topicId = "topic1"
 	c.status = true
 	return nil
 }
@@ -45,7 +45,7 @@ func (c *connection) receiveMsg() error {
 }
 
 // 4 - main
-func mainClient() {
+func run() {
 	var con connection
 	con.connectMQTTPServer()
 
@@ -53,7 +53,11 @@ func mainClient() {
 
 	con.receiveMsg()
 
-	fmt.Printf("Topico: %s\n", con.topicId)
+	fmt.Printf("Tópico: %s\n", con.topicId)
 	fmt.Printf("Msgs: %s\n", con.msgs)
+}
 
+func main() {
+
+	run()
 }

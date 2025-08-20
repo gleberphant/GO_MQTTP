@@ -29,15 +29,16 @@ func (s *server) startServer() error {
 	// create new mqtt server
 	s.server = mqtt_server.NewServer(nil)
 
-	// create listener tcp
-	s.listener = listeners.NewTCP("t1", ":1883")
-
 	// add listener to server
-
-	if err := s.server.AddListener(s.listener, nil); err != nil {
+	fmt.Println(aurora.BgBlue("Escutando TCP1 : 1883"))
+	if err := s.server.AddListener(listeners.NewTCP("tcp1", ":1883"), nil); err != nil {
 		log.Fatal(err)
 	}
 
+	fmt.Println(aurora.BgBlue("Escutando WebSocker: 1884 ...."))
+	if err := s.server.AddListener(listeners.NewWebsocket("ws1", ":1884"), nil); err != nil {
+		log.Fatal(err)
+	}
 	//start broker
 
 	if err := s.server.Serve(); err != nil {
@@ -57,7 +58,13 @@ func (s *server) startServer() error {
 	}
 
 	s.server.Events.OnMessage = func(client events.Client, msg events.Packet) (pkx events.Packet, err error) {
-		fmt.Printf("\n ** Enviada por[%s] **:  %s \n", client.ID, string(msg.Payload))
+
+		payloadFormatado := fmt.Sprintf("%s disse : %s ", string(client.ID), string(msg.Payload))
+
+		fmt.Printf("\n [%s] - [%s]\n", msg.TopicName, payloadFormatado)
+
+		msg.Payload = []byte(payloadFormatado)
+
 		return msg, nil
 	}
 

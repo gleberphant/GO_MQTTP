@@ -19,37 +19,24 @@ import (
 )
 
 type connection struct {
-	status             bool
-	broker_url         string
-	client             mqtt.Client
-	publishHandler     mqtt.MessageHandler
-	connectionHandler  mqtt.OnConnectHandler
-	connectLostHandler mqtt.ConnectionLostHandler
+	status bool
+	client mqtt.Client
 }
-
-// PUBLISHED handler
 
 // 1 - função para conectar ao servidor MQTT
 
 func (c *connection) connectBroker() error {
 
 	// config client
-	c.broker_url = "tcp://localhost:1883"
-
-	c.publishHandler = func(client mqtt.Client, msg mqtt.Message) {
-		fmt.Printf("\n Received: Topico %s - Mensagem: %s \n", msg.Topic(), msg.Payload())
-	}
-
-	c.connectionHandler = func(client mqtt.Client) {
-		fmt.Println("Connected")
-	}
-
-	c.connectLostHandler = func(client mqtt.Client, err error) {
-		fmt.Printf("Connection LOST: %v", err)
+	clientOptions := mqtt.NewClientOptions()
+	clientOptions.AddBroker("ws://localhost:1884")
+	clientOptions.SetUsername("Cliente01")
+	clientOptions.DefaultPublishHandler = func(client mqtt.Client, msg mqtt.Message) {
+		fmt.Printf("\n [ %s] - %s \n", msg.Topic(), string(msg.Payload()))
 	}
 
 	// create and connect the client
-	c.client = mqtt.NewClient(mqtt.NewClientOptions().AddBroker(c.broker_url).SetDefaultPublishHandler(c.publishHandler))
+	c.client = mqtt.NewClient(clientOptions)
 
 	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
 		log.Fatalf("Failed to connect: %v", token.Error())
@@ -60,26 +47,24 @@ func (c *connection) connectBroker() error {
 	return nil
 }
 
-// 2 - publicar mensagem
+// - subscrever um tópico
+func (c *connection) subscribeTopic(topic string) error {
+
+	if token := c.client.Subscribe(topic, 1, nil); token.Wait() && token.Error() != nil {
+		log.Fatalf("Failed to subscribe: %v", token.Error())
+	}
+
+	fmt.Printf(" *** Subscribed to topic : %s *** ", topic)
+
+	return nil
+}
+
+// 2 - publicar mensagem em um topico
 func (c *connection) publishMsg(topic string, payload string) error {
 
 	if token := c.client.Publish(topic, 0, false, payload); token.Wait() && token.Error() != nil {
 		log.Printf("Failed to publish : %v", token.Error())
 	}
-
-	return nil
-}
-
-// 3 - receber mensagens de um topico
-func (c *connection) subscribeTopic(topic string) error {
-	// subscribe operations
-
-	if token := c.client.Subscribe(topic, 1, nil); token.Wait() && token.Error() != nil {
-
-		log.Fatalf("Failed to subscribe: %v", token.Error())
-	}
-
-	fmt.Printf(" *** Subscribed to topic : %s *** ", topic)
 
 	return nil
 }
@@ -96,13 +81,18 @@ func (c *connection) disconnect() {
 func run() {
 	var con connection
 	var payload string
+
+	// iniciar buf de scan do teclado
 	scanner := bufio.NewScanner(os.Stdin)
 
+	//conectar ao servidor broker
 	con.connectBroker()
 	defer con.disconnect()
 
+	//subescrever em um topico
 	con.subscribeTopic("testes")
 
+	//loop de envio de mensagens
 	for {
 		fmt.Print("\n Digita a mensagem :")
 
@@ -114,7 +104,7 @@ func run() {
 
 		payload = scanner.Text()
 
-		if payload == "sair" {
+		if payload == "sair" || payload == "" {
 			break
 		}
 
